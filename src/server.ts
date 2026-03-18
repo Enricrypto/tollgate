@@ -1,17 +1,19 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import express from 'express';
+import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
-import pino from 'pino';
 import { buildConfig } from './config.js';
+import { logger } from './logger.js';
 import x402 from './middleware/x402.js';
 import { provisionPeer } from './services/wireguard.js';
 
 const config = buildConfig();
 
-export const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
+export { logger };
 export const app = express();
 
+app.use(helmet());
 app.use(express.json());
 
 const vpnLimiter = rateLimit({

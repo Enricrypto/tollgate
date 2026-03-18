@@ -8,6 +8,7 @@
 // Replay protection (used TX hashes) lives in replay.ts — separate concern.
 
 import { redis, disconnect } from './redis.js';
+import { logger } from '../logger.js';
 
 export interface SessionData {
   publicKey: string;
@@ -26,7 +27,7 @@ export async function storeSession(
     await redis.set(key(sessionId), JSON.stringify(data), 'EX', ttlSeconds);
     return true;
   } catch (err) {
-    console.error('[session] storeSession failed:', (err as Error).message);
+    logger.error({ err }, '[session] storeSession failed');
     return false;
   }
 }
@@ -36,7 +37,7 @@ export async function getSession(sessionId: string): Promise<SessionData | null>
     const raw = await redis.get(key(sessionId));
     return raw ? (JSON.parse(raw) as SessionData) : null;
   } catch (err) {
-    console.error('[session] getSession failed:', (err as Error).message);
+    logger.error({ err }, '[session] getSession failed');
     return null;
   }
 }
@@ -46,7 +47,7 @@ export async function deleteSession(sessionId: string): Promise<boolean> {
     await redis.del(key(sessionId));
     return true;
   } catch (err) {
-    console.error('[session] deleteSession failed:', (err as Error).message);
+    logger.error({ err }, '[session] deleteSession failed');
     return false;
   }
 }

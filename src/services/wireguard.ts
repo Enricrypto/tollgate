@@ -8,6 +8,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { buildConfig } from '../config.js';
+import { logger } from '../logger.js';
 import { redis } from './redis.js';
 import { storeSession, getSession, deleteSession } from './session.js';
 
@@ -57,7 +58,7 @@ export async function removePeer(publicKey: string): Promise<boolean> {
     return true;
   } catch (err) {
     // Peer may have already been removed — log but don't throw
-    console.warn(`[wireguard] removePeer failed (peer may already be gone): ${(err as Error).message}`);
+    logger.warn({ err }, '[wireguard] removePeer failed (peer may already be gone)');
     return false;
   }
 }
@@ -125,7 +126,7 @@ export async function provisionPeer(sessionId: string): Promise<ProvisionResult>
 export async function expirePeer(sessionId: string): Promise<boolean> {
   const session = await getSession(sessionId);
   if (!session) {
-    console.warn(`[wireguard] expirePeer: session ${sessionId} not found`);
+    logger.warn({ sessionId }, '[wireguard] expirePeer: session not found');
     return false;
   }
   await removePeer(session.publicKey);

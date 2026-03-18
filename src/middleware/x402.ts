@@ -11,8 +11,8 @@
 //           └─ invalid → 402 + { error, reason }
 
 import type { Request, Response, NextFunction } from 'express';
-import pino from 'pino';
 import { buildConfig } from '../config.js';
+import { logger } from '../logger.js';
 import { verifyPayment, type PaymentResult } from '../services/payment.js';
 
 // Extend Express Request to carry verified payment data
@@ -25,10 +25,11 @@ declare global {
 }
 
 const config = buildConfig();
-const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
 
 export default async function x402(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const txHash = req.headers['x-payment'];
+  // Guard against duplicate headers — Express may return string[] for repeated headers
+  const rawHeader = req.headers['x-payment'];
+  const txHash = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
 
   if (!txHash) {
     const base = config.PUBLIC_HOST

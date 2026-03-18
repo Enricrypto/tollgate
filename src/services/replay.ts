@@ -12,6 +12,7 @@
 
 import { redis } from './redis.js';
 import { buildConfig } from '../config.js';
+import { logger } from '../logger.js';
 
 const config = buildConfig();
 const key = (txHash: string): string => `tollgate:used_tx:${txHash}`;
@@ -21,7 +22,7 @@ export async function isTxUsed(txHash: string): Promise<boolean> {
     return (await redis.exists(key(txHash))) === 1;
   } catch (err) {
     if (config.STRICT_REPLAY_CHECK) throw err;
-    console.error('[replay] Redis down — replay check skipped:', (err as Error).message);
+    logger.warn({ err }, '[replay] Redis down — replay check skipped');
     return false;
   }
 }
@@ -32,7 +33,7 @@ export async function markTxUsed(txHash: string, ttlSeconds = 604800): Promise<b
     return true;
   } catch (err) {
     if (config.STRICT_REPLAY_CHECK) throw err;
-    console.error('[replay] Redis down — markTxUsed skipped:', (err as Error).message);
+    logger.warn({ err }, '[replay] Redis down — markTxUsed skipped');
     return false;
   }
 }

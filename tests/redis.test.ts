@@ -16,6 +16,7 @@ let redisAvailable = false;
 
 before(async () => {
   try {
+    await redis.connect();  // explicit connect required with lazyConnect + enableOfflineQueue:false
     await redis.ping();
     redisAvailable = true;
     await redis.del(`tollgate:used_tx:${TEST_TX}`);
