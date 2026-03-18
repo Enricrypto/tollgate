@@ -6,6 +6,22 @@ Pay-per-use WireGuard VPN gateway for autonomous agents. No subscriptions, no pr
 
 ---
 
+## Use cases
+
+Tollgate is built for programmatic, pay-per-use VPN access — no accounts, no subscriptions, no human in the loop. The x402 protocol makes it native to any agent or automated system that can send a USDC transaction.
+
+| Use case | Why x402 fits |
+|---|---|
+| **Autonomous AI agents** | An agent hits a geo-restricted API, receives a 402, pays, and retries — entirely without human intervention |
+| **CI/CD pipelines** | Build jobs pay only for the minutes they need VPN access; no standing subscription tied to infrastructure |
+| **Web scraping / data collection** | Each agent session gets a fresh peer IP; pay per crawl run rather than managing a pool of proxies |
+| **Multi-agent systems** | Many agents coordinate independently — each pays for its own session with no shared credentials or API keys to rotate |
+| **Privacy-sensitive upstream calls** | Agents mask the operator's origin IP when calling third-party APIs, without exposing a persistent VPN identity |
+| **IoT / embedded devices** | Low-cost devices that need occasional secure tunneling; per-use micropayments are more economical than monthly plans |
+| **Temporary developer access** | A dev needs VPN access for one hour during an incident — pays $0.01 instead of provisioning a full subscription |
+
+---
+
 ## How it works
 
 ### Payment protocol (x402)
@@ -274,36 +290,47 @@ Additional hardening in place out of the box:
 
 ## Architecture
 
+### Request flow
+
+```mermaid
+flowchart TD
+    A([Agent]) --> B[GET /vpn]
+    B --> C{Rate limit\nexceeded?}
+    C -->|Yes| D[429 Too Many Requests]
+    C -->|No| E{X-Payment\nheader?}
+    E -->|Missing| F[402 + payment JSON\nx402 middleware]
+    E -->|Present txHash| G[payment.ts\nAlchemy → Base Sepolia\nretry up to 4×5s]
+    G -->|Invalid| H[402 + reason]
+    G -->|Valid| I[replay.ts → Redis\nreplay check + mark used]
+    I -->|Duplicate TX| J[402 Already used]
+    I -->|Fresh TX| K[wireguard.ts\ngenkey · allocateIP · addPeer]
+    K --> L[session.ts → Redis\nTTL = SESSION_TTL_SECONDS]
+    L --> M[200 + WireGuard config]
 ```
-Agent
-  │
-  ▼
-GET /vpn
-  │
-  ├─ Rate limit exceeded ───► 429 + retry message  (express-rate-limit)
-  │
-  ├─ No X-Payment ──────────► 402 + payment JSON   (x402 middleware)
-  │
-  └─ X-Payment: <txHash>
-       │
-       ▼
-  payment.ts ──► Alchemy ──► Base Sepolia (retry up to 4×5s)
-       │
-       ├─ invalid ───────────► 402 + reason
-       │
-       └─ valid
-             │
-             ▼
-        replay.ts ──► Redis (replay check + mark used)
-             │
-             ▼
-        wireguard.ts (genkey, allocateIP, addPeer)
-             │
-             ▼
-        session.ts ──► Redis (store session, TTL = SESSION_TTL_SECONDS)
-             │
-             ▼
-        200 + WireGuard config string
+
+### Security layers
+
+```mermaid
+flowchart LR
+    subgraph L1[Layer 1 — Network]
+        A[UFW Firewall\nports 22 · 3002 · 51820]
+    end
+    subgraph L2[Layer 2 — Rate Limiting]
+        B[express-rate-limit\n20 req / IP / min]
+    end
+    subgraph L3[Layer 3 — Payment Gate]
+        C[x402 middleware\n402 challenge]
+    end
+    subgraph L4[Layer 4 — On-chain Verification]
+        D[Alchemy RPC\nTransfer event · amount · recipient]
+    end
+    subgraph L5[Layer 5 — Replay Protection]
+        E[Redis\nTX hash · 7-day TTL]
+    end
+    subgraph L6[Layer 6 — Peer Safety]
+        F[Rollback on Redis failure\nno zombie peers]
+    end
+    A --> B --> C --> D --> E --> F
 ```
 
 ---
@@ -319,3 +346,22 @@ GET /vpn
 | `SESSION_TTL_SECONDS` | How long a provisioned WireGuard peer stays active. Default `3600` (1 hour). |
 | `STRICT_REPLAY_CHECK` | `true` = fail closed if Redis is down (prevents replay attacks). Default `false`. **Set to `true` in production.** |
 | `PUBLIC_HOST` | Set to your public URL when behind a reverse proxy — used in the 402 resource field. |
+
+---
+
+## Next steps
+
+```mermaid
+flowchart LR
+    D1([Day 1 ✓\nCore Gateway]) --> D2[Day 2\nSession Lifecycle]
+    D2 --> a[Session expiry daemon]
+    D2 --> b[WireGuard peer cleanup]
+    D2 --> c[Rate limiting per wallet]
+    D2 --> d[IP pool hardening]
+    D2 --> e[Status dashboard]
+    D2 --> D3[Day 3\nMainnet & Scale]
+    D3 --> f[Swap to Base mainnet]
+    D3 --> g[Live Openfort key]
+    D3 --> h[WireGuard concurrency queue]
+    D3 --> i[Reverse proxy + TLS]
+```
