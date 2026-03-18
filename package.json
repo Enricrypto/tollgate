@@ -1,0 +1,29 @@
+{
+  "name": "tollgate",
+  "version": "0.1.0",
+  "description": "Pay-per-use WireGuard VPN gateway with x402 payment protocol on Base",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts",
+    "test": "PORT=3000 REDIS_URL=redis://127.0.0.1:6379 PAYMENT_STUB=true WG_STUB=true node --import tsx/esm --test tests/config.test.ts tests/payment.test.ts tests/server.test.ts tests/redis.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openfort/openfort-node": "^0.10.2",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.3.1",
+    "ioredis": "^5.4.1",
+    "pino": "^9.3.2",
+    "viem": "^2.47.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
