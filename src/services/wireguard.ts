@@ -16,11 +16,13 @@ const config = buildConfig();
 
 const IP_COUNTER_KEY = 'tollgate:wg_ip_counter';
 
+// TODO(day-2): consumed directly by the session expiry daemon
 export interface Keypair {
   privateKey: string;
   publicKey: string;
 }
 
+// TODO(day-2): consumed directly by the session expiry daemon
 export interface ProvisionResult {
   wireGuardConfig: string;
   allowedIP: string;
@@ -29,6 +31,7 @@ export interface ProvisionResult {
 
 // ─── Keypair ──────────────────────────────────────────────────────────────────
 
+// TODO(day-2): exported for direct use by session expiry daemon
 export function generateKeypair(): Keypair {
   const privateKey = execFileSync('wg', ['genkey']).toString().trim();
   const publicKey  = execFileSync('wg', ['pubkey'], { input: privateKey }).toString().trim();
@@ -39,6 +42,7 @@ export function generateKeypair(): Keypair {
 
 // Atomically increments a Redis counter and maps it to 10.0.0.10–10.0.0.209.
 // Stays clear of .0 (network), .1 (server gateway), and .255 (broadcast).
+// TODO(day-2): exported for direct use by session expiry daemon
 export async function allocateIP(): Promise<string> {
   const counter = await redis.incr(IP_COUNTER_KEY);
   const octet   = (counter % 200) + 10;   // 10 – 209
@@ -47,12 +51,14 @@ export async function allocateIP(): Promise<string> {
 
 // ─── Peer management ─────────────────────────────────────────────────────────
 
-export async function addPeer(publicKey: string, allowedIP: string): Promise<boolean> {
+// TODO(day-2): exported for direct use by session expiry daemon
+export function addPeer(publicKey: string, allowedIP: string): boolean {
   execFileSync('wg', ['set', config.WG_INTERFACE, 'peer', publicKey, 'allowed-ips', `${allowedIP}/32`]);
   return true;
 }
 
-export async function removePeer(publicKey: string): Promise<boolean> {
+// TODO(day-2): exported for direct use by session expiry daemon
+export function removePeer(publicKey: string): boolean {
   try {
     execFileSync('wg', ['set', config.WG_INTERFACE, 'peer', publicKey, 'remove']);
     return true;
@@ -65,6 +71,7 @@ export async function removePeer(publicKey: string): Promise<boolean> {
 
 // ─── Client config builder ────────────────────────────────────────────────────
 
+// TODO(day-2): exported for direct use by session expiry daemon
 export function buildClientConfig(privateKey: string, allowedIP: string): string {
   if (!config.WG_SERVER_PUBLIC_KEY) throw new Error('WG_SERVER_PUBLIC_KEY not set in env');
   if (!config.WG_SERVER_ENDPOINT)   throw new Error('WG_SERVER_ENDPOINT not set in env');
@@ -122,6 +129,7 @@ export async function provisionPeer(sessionId: string): Promise<ProvisionResult>
 
 /**
  * Remove a peer and clean up its session on TTL expiry or manual revocation.
+ * TODO(day-2): wired up by the session expiry daemon — do not remove.
  */
 export async function expirePeer(sessionId: string): Promise<boolean> {
   const session = await getSession(sessionId);

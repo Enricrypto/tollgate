@@ -61,7 +61,7 @@ export default async function x402(req: Request, res: Response, next: NextFuncti
   }
 
   try {
-    const result = await verifyPayment(txHash as string);
+    const result = await verifyPayment(txHash);
 
     if (result.valid) {
       req.payment = result;

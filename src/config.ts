@@ -11,6 +11,13 @@
 
 const REQUIRED_NOW = ['PORT', 'REDIS_URL'];
 
+function parseIntStrict(value: string | undefined, fallback: number, name: string): number {
+  if (value === undefined) return fallback;
+  const n = parseInt(value);
+  if (isNaN(n)) throw new Error(`${name} must be a valid number`);
+  return n;
+}
+
 export interface AppConfig {
   // Phase 1
   PORT: number;
@@ -59,7 +66,7 @@ export function buildConfig(env: NodeJS.ProcessEnv = process.env): Readonly<AppC
 
     // Phase 3
     ALCHEMY_API_KEY:           env.ALCHEMY_API_KEY ?? '',
-    BASE_CHAIN_ID:             parseInt(env.BASE_CHAIN_ID ?? '84532'),
+    BASE_CHAIN_ID:             parseIntStrict(env.BASE_CHAIN_ID, 84532, 'BASE_CHAIN_ID'),
     USDC_CONTRACT_ADDRESS:     env.USDC_CONTRACT_ADDRESS ?? '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     PAYMENT_RECIPIENT_ADDRESS: env.PAYMENT_RECIPIENT_ADDRESS ?? '',
     PAYMENT_AMOUNT_USDC:       env.PAYMENT_AMOUNT_USDC ?? '0.01',
@@ -72,7 +79,7 @@ export function buildConfig(env: NodeJS.ProcessEnv = process.env): Readonly<AppC
     WG_INTERFACE:         env.WG_INTERFACE ?? 'wg0',
     WG_SERVER_PUBLIC_KEY: env.WG_SERVER_PUBLIC_KEY ?? '',
     WG_SERVER_ENDPOINT:   env.WG_SERVER_ENDPOINT ?? '',
-    WG_SERVER_PORT:       parseInt(env.WG_SERVER_PORT ?? '51820'),
+    WG_SERVER_PORT:       parseIntStrict(env.WG_SERVER_PORT, 51820, 'WG_SERVER_PORT'),
     WG_DNS:               env.WG_DNS ?? '1.1.1.1',
   });
 }

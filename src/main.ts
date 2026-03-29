@@ -3,13 +3,14 @@
 
 import 'dotenv/config';
 import { app, logger } from './server.js';
-import { buildConfig } from './config.js';
 import { disconnect } from './services/session.js';
 
-const config = buildConfig();
+// config is already built inside server.ts at module load — re-use via app.get('config') pattern
+// is unnecessary complexity; instead we read PORT directly from env (already validated by server.ts).
+const PORT = parseInt(process.env.PORT!);
 
-app.listen(config.PORT, () => {
-  logger.info({ port: config.PORT }, 'Tollgate online');
+app.listen(PORT, () => {
+  logger.info({ port: PORT }, 'Tollgate online');
 });
 
 const shutdown = async (signal: string) => {
